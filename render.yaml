@@ -1,0 +1,40 @@
+services:
+  # Backend API Service
+  - type: web
+    name: multitask-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm ci && npx prisma generate
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # User will set this
+      - key: JWT_SECRET
+        sync: false # User will set this
+      - key: JWT_REFRESH_SECRET
+        sync: false # User will set this
+      - key: FRONTEND_URL
+        sync: false # User will set this
+
+  # Frontend Service
+  - type: web
+    name: multitask-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false # User will set this
+
+  # MySQL Database
+  - type: pserv
+    name: multitask-db
+    env: mysql
+    plan: free
+    ipAllowList: [] # Only allow internal connections
+    databases:
+      - name: multitask
