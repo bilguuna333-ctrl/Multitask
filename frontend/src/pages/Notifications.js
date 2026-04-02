@@ -6,7 +6,23 @@ import EmptyState from '../components/shared/EmptyState';
 import { PageLoader } from '../components/shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 
-const typeIcon = { TASK_ASSIGNED: 'bg-blue-100 text-blue-600', COMMENT_ADDED: 'bg-green-100 text-green-600', DUE_DATE_CHANGED: 'bg-orange-100 text-orange-600', INVITE_SENT: 'bg-purple-100 text-purple-600' };
+const typeIcon = { 
+  TASK_ASSIGNED: 'bg-blue-100 text-blue-600', 
+  COMMENT_ADDED: 'bg-green-100 text-green-600', 
+  DUE_DATE_CHANGED: 'bg-orange-100 text-orange-600', 
+  INVITE_SENT: 'bg-purple-100 text-purple-600',
+  INVITATION_RECEIVED: 'bg-pink-100 text-pink-600',
+  INVITATION_ACCEPTED: 'bg-indigo-100 text-indigo-600',
+  APPLICATION_RECEIVED: 'bg-cyan-100 text-cyan-600',
+  APPLICATION_ACCEPTED: 'bg-emerald-100 text-emerald-600',
+  APPLICATION_REJECTED: 'bg-rose-100 text-rose-600',
+  MEMBER_ROLE_UPDATED: 'bg-amber-100 text-amber-600',
+  MEMBER_REACTIVATED: 'bg-teal-100 text-teal-600',
+  PROJECT_MEMBER_ADDED: 'bg-violet-100 text-violet-600',
+  TASK_APPROVED: 'bg-green-100 text-green-600',
+  TASK_REJECTED: 'bg-red-100 text-red-600',
+  SUBMISSION_REVIEW: 'bg-yellow-100 text-yellow-600'
+};
 
 export default function Notifications() {
   const [notifications, setNotifications] = useState([]);

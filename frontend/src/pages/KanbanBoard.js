@@ -4,6 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { List, Calendar, Plus } from 'lucide-react';
 import taskService from '../services/taskService';
 import projectService from '../services/projectService';
+import useAuthStore from '../store/authStore';
 import { PageLoader } from '../components/shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 
@@ -21,11 +22,15 @@ export default function KanbanBoard() {
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState('');
+  const [myTasksOnly, setMyTasksOnly] = useState(false);
+  const { user, membership } = useAuthStore();
+  const isManager = ['OWNER', 'MANAGER'].includes(membership?.role);
 
   const fetchTasks = async () => {
     try {
       const params = { limit: 200 };
       if (selectedProject) params.projectId = selectedProject;
+      if (myTasksOnly) params.assigneeId = user.id;
       const res = await taskService.getTasks(params);
       setTasks(res.data.data || []);
     } catch (err) {
@@ -43,7 +48,7 @@ export default function KanbanBoard() {
   };
 
   useEffect(() => { fetchProjects(); }, []);
-  useEffect(() => { setLoading(true); fetchTasks(); }, [selectedProject]);
+  useEffect(() => { setLoading(true); fetchTasks(); }, [selectedProject, myTasksOnly]);
 
   const getColumnTasks = (status) => tasks.filter(t => t.status === status).sort((a, b) => a.position - b.position);
 
@@ -84,6 +89,12 @@ export default function KanbanBoard() {
           <p className="text-gray-600 mt-1">Drag and drop to update task status</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setMyTasksOnly(!myTasksOnly)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${myTasksOnly ? 'bg-primary-600 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+          >
+            My Tasks
+          </button>
           <select className="input-field text-sm w-auto" value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)}>
             <option value="">All Projects</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -112,7 +123,7 @@ export default function KanbanBoard() {
                       className={`p-2 space-y-2 min-h-[200px] transition-colors ${snapshot.isDraggingOver ? 'bg-primary-50/50' : ''}`}
                     >
                       {colTasks.map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
+                        <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={!isManager}>
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}

@@ -140,27 +140,67 @@ class ProjectService {
     return { message: 'Project deleted' };
   }
 
-  async addProjectMember(projectId, workspaceId, userId) {
+  async addProjectMember(projectId, workspaceId, userId, currentUserId) {
     const project = await prisma.project.findFirst({ where: { id: projectId, workspaceId } });
     if (!project) throw new AppError('Project not found', 404);
 
     const membership = await prisma.membership.findFirst({
       where: { userId, workspaceId, isActive: true },
+      include: { user: true },
     });
     if (!membership) throw new AppError('User is not a workspace member', 400);
 
-    return prisma.projectMember.create({
+    const pm = await prisma.projectMember.create({
       data: { projectId, userId },
     });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'PROJECT_MEMBER_ADDED',
+        entityType: 'PROJECT',
+        entityId: projectId,
+        details: JSON.stringify({ userId, email: membership.user.email, name: project.name }),
+        workspaceId,
+        userId: currentUserId,
+      },
+    });
+
+    if (userId !== currentUserId) {
+      await prisma.notification.create({
+        data: {
+          type: 'PROJECT_MEMBER_ADDED',
+          title: 'Added to Project',
+          message: `You have been added to project "${project.name}"`,
+          link: `/projects/${projectId}`,
+          workspaceId,
+          userId,
+        },
+      });
+    }
+
+    return pm;
   }
 
-  async removeProjectMember(projectId, workspaceId, userId) {
+  async removeProjectMember(projectId, workspaceId, userId, currentUserId) {
     const pm = await prisma.projectMember.findFirst({
       where: { projectId, userId, project: { workspaceId } },
+      include: { user: true, project: true },
     });
     if (!pm) throw new AppError('Project member not found', 404);
 
     await prisma.projectMember.delete({ where: { id: pm.id } });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'PROJECT_MEMBER_REMOVED',
+        entityType: 'PROJECT',
+        entityId: projectId,
+        details: JSON.stringify({ userId, email: pm.user.email, name: pm.project.name }),
+        workspaceId,
+        userId: currentUserId,
+      },
+    });
+
     return { message: 'Member removed from project' };
   }
 }

@@ -2,7 +2,17 @@ const prisma = require('../prisma/client');
 const AppError = require('../utils/AppError');
 
 class TaskService {
+  async checkManagerRole(workspaceId, userId) {
+    const membership = await prisma.membership.findFirst({
+      where: { userId, workspaceId, isActive: true },
+    });
+    if (!membership || !['OWNER', 'MANAGER'].includes(membership.role)) {
+      throw new AppError('Only managers can perform this action', 403);
+    }
+  }
+
   async createTask(workspaceId, userId, data) {
+    await this.checkManagerRole(workspaceId, userId);
     const project = await prisma.project.findFirst({
       where: { id: data.projectId, workspaceId },
     });
@@ -85,7 +95,12 @@ class TaskService {
           assignee: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
           creator: { select: { id: true, firstName: true, lastName: true } },
           project: { select: { id: true, name: true } },
-          _count: { select: { comments: true } },
+          reviewedBy: { select: { id: true, firstName: true, lastName: true } },
+          submissions: {
+            include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+            orderBy: { createdAt: 'desc' },
+          },
+          _count: { select: { comments: true, submissions: true } },
         },
         orderBy: [{ position: 'asc' }, { createdAt: 'desc' }],
         skip,
@@ -107,7 +122,12 @@ class TaskService {
         assignee: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, email: true } },
         creator: { select: { id: true, firstName: true, lastName: true } },
         project: { select: { id: true, name: true } },
+        reviewedBy: { select: { id: true, firstName: true, lastName: true } },
         comments: {
+          include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+        submissions: {
           include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } },
           orderBy: { createdAt: 'desc' },
         },
@@ -121,6 +141,14 @@ class TaskService {
   async updateTask(taskId, workspaceId, userId, data) {
     const task = await prisma.task.findFirst({ where: { id: taskId, workspaceId } });
     if (!task) throw new AppError('Task not found', 404);
+
+    // Check if user is MANAGER/OWNER
+    const membership = await prisma.membership.findFirst({
+      where: { userId, workspaceId, isActive: true },
+    });
+    if (!membership || !['OWNER', 'MANAGER'].includes(membership.role)) {
+      throw new AppError('Only managers can update tasks directly', 403);
+    }
 
     const updateData = {};
     if (data.title !== undefined) updateData.title = data.title;
@@ -184,6 +212,7 @@ class TaskService {
   }
 
   async reorderTasks(workspaceId, userId, tasks) {
+    await this.checkManagerRole(workspaceId, userId);
     const updates = tasks.map(t =>
       prisma.task.updateMany({
         where: { id: t.id, workspaceId },
@@ -195,6 +224,7 @@ class TaskService {
   }
 
   async deleteTask(taskId, workspaceId, userId) {
+    await this.checkManagerRole(workspaceId, userId);
     const task = await prisma.task.findFirst({ where: { id: taskId, workspaceId } });
     if (!task) throw new AppError('Task not found', 404);
 
@@ -215,10 +245,23 @@ class TaskService {
   }
 
   async archiveTask(taskId, workspaceId, userId) {
+    await this.checkManagerRole(workspaceId, userId);
     const task = await prisma.task.findFirst({ where: { id: taskId, workspaceId } });
     if (!task) throw new AppError('Task not found', 404);
 
     await prisma.task.update({ where: { id: taskId }, data: { isArchived: true } });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'TASK_ARCHIVED',
+        entityType: 'TASK',
+        entityId: taskId,
+        details: JSON.stringify({ title: task.title }),
+        workspaceId,
+        userId,
+      },
+    });
+
     return { message: 'Task archived' };
   }
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Search, FolderKanban, Users, CheckSquare, Archive } from 'lucide-react';
 import projectService from '../services/projectService';
+import useAuthStore from '../store/authStore';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
 import { PageLoader } from '../components/shared/LoadingSpinner';
@@ -16,6 +17,7 @@ export default function Projects() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ name: '', description: '' });
   const [creating, setCreating] = useState(false);
+  const { membership } = useAuthStore();
 
   const fetchProjects = async () => {
     try {
@@ -60,6 +62,8 @@ export default function Projects() {
 
   if (loading) return <PageLoader />;
 
+  const isManager = ['OWNER', 'MANAGER'].includes(membership?.role);
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -67,9 +71,11 @@ export default function Projects() {
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
           <p className="text-gray-600 mt-1">{projects.length} project{projects.length !== 1 ? 's' : ''}</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn-primary">
-          <Plus className="w-4 h-4 mr-2" /> New Project
-        </button>
+        {isManager && (
+          <button onClick={() => setShowCreate(true)} className="btn-primary">
+            <Plus className="w-4 h-4 mr-2" /> New Project
+          </button>
+        )}
       </div>
 
       <div className="mb-6">
@@ -84,7 +90,7 @@ export default function Projects() {
           icon={FolderKanban}
           title="No projects yet"
           description="Create your first project to get started"
-          action={<button onClick={() => setShowCreate(true)} className="btn-primary"><Plus className="w-4 h-4 mr-2" /> Create Project</button>}
+          action={isManager ? <button onClick={() => setShowCreate(true)} className="btn-primary"><Plus className="w-4 h-4 mr-2" /> Create Project</button> : null}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -102,9 +108,11 @@ export default function Projects() {
                 <span className="flex items-center gap-1"><CheckSquare className="w-3.5 h-3.5" /> {project._count?.tasks || 0} tasks</span>
                 <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {project._count?.projectMembers || 0} members</span>
               </div>
-              <button onClick={(e) => { e.preventDefault(); handleArchive(project.id); }} className="mt-3 text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Archive className="w-3 h-3" /> Archive
-              </button>
+              {isManager && (
+                <button onClick={(e) => { e.preventDefault(); handleArchive(project.id); }} className="mt-3 text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Archive className="w-3 h-3" /> Archive
+                </button>
+              )}
             </Link>
           ))}
         </div>

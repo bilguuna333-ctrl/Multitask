@@ -1,53 +1,133 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { OAuth2Client } = require('google-auth-library');
 const prisma = require('../prisma/client');
 const AppError = require('../utils/AppError');
 const { generateTokenPair, verifyRefreshToken } = require('../utils/jwt');
 const { sendPasswordResetEmail } = require('../utils/email');
 
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 class AuthService {
-  async register({ workspaceName, firstName, lastName, email, password }) {
+  async register({ firstName, lastName, email, password }) {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       throw new AppError('Email already registered', 409);
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
-    const slug = workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + uuidv4().slice(0, 6);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const workspace = await tx.workspace.create({
-        data: { name: workspaceName, slug },
-      });
-
-      const user = await tx.user.create({
-        data: { email, passwordHash, firstName, lastName },
-      });
-
-      const membership = await tx.membership.create({
-        data: { userId: user.id, workspaceId: workspace.id, role: 'OWNER' },
-      });
-
-      return { workspace, user, membership };
+    const user = await prisma.user.create({
+      data: { email, passwordHash, firstName, lastName },
     });
 
-    const tokens = generateTokenPair(result.user, result.membership);
+    const tokens = generateTokenPair(user, null);
 
     return {
       user: {
-        id: result.user.id,
-        email: result.user.email,
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      },
+      workspace: null,
+      membership: null,
+      needsWorkspace: true,
+      ...tokens,
+    };
+  }
+
+  async googleLogin({ credential }) {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      throw new AppError('Google login is not configured', 500);
+    }
+    if (!credential) {
+      throw new AppError('Google credential is required', 400);
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email || !payload.sub) {
+      throw new AppError('Invalid Google credential', 401);
+    }
+
+    const email = payload.email.toLowerCase();
+    const googleId = payload.sub;
+    const firstName = payload.given_name || 'User';
+    const lastName = payload.family_name || '';
+    const avatarUrl = payload.picture || null;
+
+    let user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          googleId,
+          authProvider: 'GOOGLE',
+          firstName,
+          lastName,
+          avatarUrl,
+          passwordHash: null,
+        },
+      });
+    } else {
+      const updateData = {};
+      if (!user.googleId) updateData.googleId = googleId;
+      if (user.authProvider !== 'GOOGLE') updateData.authProvider = 'GOOGLE';
+      if (!user.avatarUrl && avatarUrl) updateData.avatarUrl = avatarUrl;
+      if (Object.keys(updateData).length) {
+        user = await prisma.user.update({ where: { id: user.id }, data: updateData });
+      }
+    }
+
+    if (!user.isActive) {
+      throw new AppError('Account is disabled', 403);
+    }
+
+    const membership = await prisma.membership.findFirst({
+      where: { userId: user.id, isActive: true },
+      include: { workspace: true },
+    });
+
+    if (!membership) {
+      const tokens = generateTokenPair(user, null);
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatarUrl: user.avatarUrl,
+        },
+        workspace: null,
+        membership: null,
+        needsWorkspace: true,
+        ...tokens,
+      };
+    }
+
+    const tokens = generateTokenPair(user, membership);
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
       },
       workspace: {
-        id: result.workspace.id,
-        name: result.workspace.name,
-        slug: result.workspace.slug,
+        id: membership.workspace.id,
+        name: membership.workspace.name,
+        slug: membership.workspace.slug,
       },
       membership: {
-        id: result.membership.id,
-        role: result.membership.role,
+        id: membership.id,
+        role: membership.role,
       },
       ...tokens,
     };
@@ -57,6 +137,10 @@ class AuthService {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) {
       throw new AppError('Invalid email or password', 401);
+    }
+
+    if (!user.passwordHash) {
+      throw new AppError('This account uses Google Sign-In. Please continue with Google.', 400);
     }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
@@ -70,7 +154,21 @@ class AuthService {
     });
 
     if (!membership) {
-      throw new AppError('No active workspace found', 404);
+      // User exists but has no workspace — return partial auth so frontend can redirect
+      const tokens = generateTokenPair(user, null);
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          avatarUrl: user.avatarUrl,
+        },
+        workspace: null,
+        membership: null,
+        needsWorkspace: true,
+        ...tokens,
+      };
     }
 
     const tokens = generateTokenPair(user, membership);
@@ -175,7 +273,8 @@ class AuthService {
       where: { id: userId },
       select: {
         id: true, email: true, firstName: true, lastName: true,
-        avatarUrl: true, createdAt: true,
+        avatarUrl: true, createdAt: true, authProvider: true, googleId: true,
+        passwordHash: true,
         memberships: {
           where: { isActive: true },
           include: { workspace: { select: { id: true, name: true, slug: true } } },
@@ -183,7 +282,9 @@ class AuthService {
       },
     });
     if (!user) throw new AppError('User not found', 404);
-    return user;
+    
+    const { passwordHash, ...safeUser } = user;
+    return { ...safeUser, hasPassword: !!passwordHash };
   }
 
   async updateProfile(userId, data) {
@@ -202,12 +303,15 @@ class AuthService {
 
   async changePassword(userId, currentPassword, newPassword) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!isMatch) throw new AppError('Current password is incorrect', 400);
+    
+    if (user.passwordHash) {
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) throw new AppError('Current password is incorrect', 400);
+    }
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
-    return { message: 'Password changed successfully' };
+    return { message: user.passwordHash ? 'Password changed successfully' : 'Password set successfully' };
   }
 
   async switchWorkspace(userId, workspaceId) {

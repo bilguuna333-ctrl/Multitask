@@ -13,10 +13,17 @@ const actionLabels = {
   PROJECT_CREATED: 'created a project',
   PROJECT_UPDATED: 'updated a project',
   PROJECT_ARCHIVED: 'archived a project',
+  PROJECT_MEMBER_ADDED: 'added a member to project',
+  PROJECT_MEMBER_REMOVED: 'removed a member from project',
   TASK_CREATED: 'created a task',
   TASK_UPDATED: 'updated a task',
   TASK_DELETED: 'deleted a task',
+  TASK_ARCHIVED: 'archived a task',
   COMMENT_ADDED: 'added a comment',
+  MEMBER_ROLE_UPDATED: 'updated a member role',
+  MEMBER_REMOVED: 'removed a member',
+  MEMBER_REACTIVATED: 'reactivated a member',
+  WORKSPACE_UPDATED: 'updated workspace settings',
 };
 
 export default function Dashboard() {

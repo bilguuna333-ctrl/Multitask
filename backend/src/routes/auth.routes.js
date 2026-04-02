@@ -5,12 +5,14 @@ const { validate } = require('../middlewares/validate');
 const {
   registerValidator,
   loginValidator,
+  googleLoginValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
   refreshTokenValidator,
 } = require('../validators/auth.validators');
 
 router.post('/register', registerValidator, validate, authController.register);
+router.post('/google', googleLoginValidator, validate, authController.googleLogin);
 router.post('/login', loginValidator, validate, authController.login);
 router.post('/refresh-token', refreshTokenValidator, validate, authController.refreshToken);
 router.post('/forgot-password', forgotPasswordValidator, validate, authController.forgotPassword);

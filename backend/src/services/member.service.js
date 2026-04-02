@@ -38,49 +38,115 @@ class MemberService {
     };
   }
 
-  async updateRole(membershipId, role, workspaceId, currentUserRole) {
+  async updateRole(membershipId, role, workspaceId, currentUserId, currentUserRole) {
     const membership = await prisma.membership.findFirst({
       where: { id: membershipId, workspaceId },
+      include: { user: true },
     });
     if (!membership) throw new AppError('Member not found', 404);
     if (membership.role === 'OWNER') throw new AppError('Cannot change owner role', 403);
-    if (currentUserRole !== 'OWNER' && currentUserRole !== 'ADMIN') {
+    if (currentUserRole !== 'OWNER' && currentUserRole !== 'MANAGER') {
       throw new AppError('Insufficient permissions', 403);
     }
 
-    return prisma.membership.update({
+    const updated = await prisma.membership.update({
       where: { id: membershipId },
       data: { role },
       include: {
         user: { select: { id: true, email: true, firstName: true, lastName: true } },
       },
     });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'MEMBER_ROLE_UPDATED',
+        entityType: 'MEMBER',
+        entityId: membershipId,
+        details: JSON.stringify({ userId: membership.userId, email: membership.user.email, oldRole: membership.role, newRole: role }),
+        workspaceId,
+        userId: currentUserId,
+      },
+    });
+
+    if (membership.userId !== currentUserId) {
+      await prisma.notification.create({
+        data: {
+          type: 'MEMBER_ROLE_UPDATED',
+          title: 'Role Updated',
+          message: `Your role in the workspace has been updated to ${role}`,
+          workspaceId,
+          userId: membership.userId,
+        },
+      });
+    }
+
+    return updated;
   }
 
   async removeMember(membershipId, workspaceId, currentUserId) {
     const membership = await prisma.membership.findFirst({
       where: { id: membershipId, workspaceId },
+      include: { user: true },
     });
     if (!membership) throw new AppError('Member not found', 404);
     if (membership.role === 'OWNER') throw new AppError('Cannot remove workspace owner', 403);
     if (membership.userId === currentUserId) throw new AppError('Cannot remove yourself', 400);
 
-    return prisma.membership.update({
+    const result = await prisma.membership.update({
       where: { id: membershipId },
       data: { isActive: false },
     });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'MEMBER_REMOVED',
+        entityType: 'MEMBER',
+        entityId: membershipId,
+        details: JSON.stringify({ userId: membership.userId, email: membership.user.email }),
+        workspaceId,
+        userId: currentUserId,
+      },
+    });
+
+    return result;
   }
 
-  async reactivateMember(membershipId, workspaceId) {
+  async reactivateMember(membershipId, workspaceId, currentUserId) {
     const membership = await prisma.membership.findFirst({
       where: { id: membershipId, workspaceId },
+      include: { user: true },
     });
     if (!membership) throw new AppError('Member not found', 404);
 
-    return prisma.membership.update({
+    const result = await prisma.membership.update({
       where: { id: membershipId },
       data: { isActive: true },
     });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'MEMBER_REACTIVATED',
+        entityType: 'MEMBER',
+        entityId: membershipId,
+        details: JSON.stringify({ userId: membership.userId, email: membership.user.email }),
+        workspaceId,
+        userId: currentUserId,
+      },
+    });
+
+    if (membership.userId !== currentUserId) {
+      await prisma.notification.create({
+        data: {
+          type: 'MEMBER_REACTIVATED',
+          title: 'Account Reactivated',
+          message: `Your access to the workspace has been reactivated`,
+          workspaceId,
+          userId: membership.userId,
+        },
+      });
+    }
+
+    return result;
   }
 }
 

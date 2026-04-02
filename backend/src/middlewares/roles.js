@@ -2,13 +2,13 @@ const AppError = require('../utils/AppError');
 
 const ROLES = {
   OWNER: 'OWNER',
-  ADMIN: 'ADMIN',
+  MANAGER: 'MANAGER',
   MEMBER: 'MEMBER',
 };
 
 const ROLE_HIERARCHY = {
   OWNER: 3,
-  ADMIN: 2,
+  MANAGER: 2,
   MEMBER: 1,
 };
 

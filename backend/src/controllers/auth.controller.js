@@ -11,6 +11,15 @@ class AuthController {
     }
   }
 
+  async googleLogin(req, res, next) {
+    try {
+      const result = await authService.googleLogin(req.body);
+      return ApiResponse.success(res, result, 'Login successful');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req, res, next) {
     try {
       const result = await authService.login(req.body);

@@ -8,8 +8,8 @@ const { updateRoleValidator } = require('../validators/member.validators');
 router.use(authenticate);
 
 router.get('/', memberController.getMembers);
-router.put('/:id/role', requireMinRole('ADMIN'), updateRoleValidator, validate, memberController.updateRole);
-router.delete('/:id', requireMinRole('ADMIN'), memberController.removeMember);
-router.post('/:id/reactivate', requireMinRole('ADMIN'), memberController.reactivateMember);
+router.put('/:id/role', requireMinRole('MANAGER'), updateRoleValidator, validate, memberController.updateRole);
+router.delete('/:id', requireMinRole('MANAGER'), memberController.removeMember);
+router.post('/:id/reactivate', requireMinRole('MANAGER'), memberController.reactivateMember);
 
 module.exports = router;

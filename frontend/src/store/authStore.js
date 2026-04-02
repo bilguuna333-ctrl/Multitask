@@ -27,7 +27,49 @@ const useAuthStore = create((set, get) => ({
     try {
       const { data } = await api.post('/auth/register', formData);
       if (data.success) {
-        get().setAuth(data.data);
+        if (data.data.needsWorkspace) {
+          localStorage.setItem('accessToken', data.data.accessToken);
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+          localStorage.setItem('user', JSON.stringify(data.data.user));
+          localStorage.removeItem('workspace');
+          localStorage.removeItem('membership');
+          set({
+            user: data.data.user,
+            workspace: null,
+            membership: null,
+            isAuthenticated: true,
+          });
+        } else {
+          get().setAuth(data.data);
+        }
+        return data;
+      }
+      throw new Error(data.message);
+    } finally {
+      set({ loading: false });
+    }
+  },
+
+  googleLogin: async (credential) => {
+    set({ loading: true });
+    try {
+      const { data } = await api.post('/auth/google', { credential });
+      if (data.success) {
+        if (data.data.needsWorkspace) {
+          localStorage.setItem('accessToken', data.data.accessToken);
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+          localStorage.setItem('user', JSON.stringify(data.data.user));
+          localStorage.removeItem('workspace');
+          localStorage.removeItem('membership');
+          set({
+            user: data.data.user,
+            workspace: null,
+            membership: null,
+            isAuthenticated: true,
+          });
+        } else {
+          get().setAuth(data.data);
+        }
         return data;
       }
       throw new Error(data.message);
@@ -41,7 +83,22 @@ const useAuthStore = create((set, get) => ({
     try {
       const { data } = await api.post('/auth/login', { email, password });
       if (data.success) {
-        get().setAuth(data.data);
+        if (data.data.needsWorkspace) {
+          // Store tokens and user but no workspace
+          localStorage.setItem('accessToken', data.data.accessToken);
+          localStorage.setItem('refreshToken', data.data.refreshToken);
+          localStorage.setItem('user', JSON.stringify(data.data.user));
+          localStorage.removeItem('workspace');
+          localStorage.removeItem('membership');
+          set({
+            user: data.data.user,
+            workspace: null,
+            membership: null,
+            isAuthenticated: true,
+          });
+        } else {
+          get().setAuth(data.data);
+        }
         return data;
       }
       throw new Error(data.message);

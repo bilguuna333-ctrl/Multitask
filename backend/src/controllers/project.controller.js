@@ -67,7 +67,7 @@ class ProjectController {
   async addProjectMember(req, res, next) {
     try {
       const result = await projectService.addProjectMember(
-        req.params.id, req.user.workspaceId, req.body.userId
+        req.params.id, req.user.workspaceId, req.body.userId, req.user.id
       );
       return ApiResponse.created(res, result, 'Member added to project');
     } catch (error) {
@@ -78,7 +78,7 @@ class ProjectController {
   async removeProjectMember(req, res, next) {
     try {
       const result = await projectService.removeProjectMember(
-        req.params.id, req.user.workspaceId, req.params.userId
+        req.params.id, req.user.workspaceId, req.params.userId, req.user.id
       );
       return ApiResponse.success(res, result);
     } catch (error) {

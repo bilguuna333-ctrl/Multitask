@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, FolderKanban, CheckSquare, Users, Mail,
   Bell, Settings, LogOut, ChevronLeft, ChevronRight, User,
-  Building2
+  Building2, FileText
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import notificationService from '../../services/notificationService';
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -13,6 +14,7 @@ const navItems = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/members', icon: Users, label: 'Members' },
   { to: '/invitations', icon: Mail, label: 'Invitations' },
+  { to: '/applications', icon: FileText, label: 'Applications', adminOnly: true },
   { to: '/notifications', icon: Bell, label: 'Notifications' },
 ];
 
@@ -23,8 +25,27 @@ const bottomItems = [
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, workspace, logout } = useAuthStore();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const { user, workspace, membership, logout } = useAuthStore();
+  const userRole = membership?.role || 'MEMBER';
+  const isAdmin = ['OWNER', 'MANAGER'].includes(userRole);
   const navigate = useNavigate();
+
+  const fetchUnreadCount = async () => {
+    if (!user) return;
+    try {
+      const res = await notificationService.getUnreadCount();
+      setUnreadCount(res.data.data.count);
+    } catch (err) {
+      console.error('Failed to fetch unread count');
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -48,12 +69,12 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
+        {navItems.filter((item) => !item.adminOnly || isAdmin).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
                 isActive
                   ? 'bg-primary-50 text-primary-700'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -62,6 +83,11 @@ export default function Sidebar() {
           >
             <item.icon className="w-5 h-5 flex-shrink-0" />
             {!collapsed && <span>{item.label}</span>}
+            {item.to === '/notifications' && unreadCount > 0 && (
+              <span className={`absolute flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white ${collapsed ? 'top-1 right-2 w-4 h-4' : 'right-3 w-5 h-5'}`}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

@@ -24,13 +24,13 @@ function generateTokenPair(user, membership) {
   const payload = {
     userId: user.id,
     email: user.email,
-    workspaceId: membership.workspaceId,
-    membershipId: membership.id,
-    role: membership.role,
+    workspaceId: membership ? membership.workspaceId : null,
+    membershipId: membership ? membership.id : null,
+    role: membership ? membership.role : null,
   };
   return {
     accessToken: generateAccessToken(payload),
-    refreshToken: generateRefreshToken({ userId: user.id, membershipId: membership.id }),
+    refreshToken: generateRefreshToken({ userId: user.id, membershipId: membership ? membership.id : null }),
   };
 }
 

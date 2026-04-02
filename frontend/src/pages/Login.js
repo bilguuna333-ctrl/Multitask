@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckSquare, Eye, EyeOff } from 'lucide-react';
+import { GoogleLogin } from '@react-oauth/google';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -9,7 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const { login, loading } = useAuthStore();
+  const { login, googleLogin, loading } = useAuthStore();
   const navigate = useNavigate();
 
   const validate = () => {
@@ -25,11 +26,31 @@ export default function Login() {
     e.preventDefault();
     if (!validate()) return;
     try {
-      await login(email, password);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
+      const res = await login(email, password);
+      if (res.data?.needsWorkspace) {
+        toast.success('Please select or create a company');
+        navigate('/company-select');
+      } else {
+        toast.success('Welcome back!');
+        navigate('/dashboard');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed');
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const res = await googleLogin(credentialResponse.credential);
+      if (res.data?.needsWorkspace) {
+        toast.success('Please select or create a company');
+        navigate('/company-select');
+      } else {
+        toast.success('Welcome back!');
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Google login failed');
     }
   };
 
@@ -37,10 +58,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
-              <CheckSquare className="w-6 h-6 text-white" />
-            </div>
+          <Link to="/" className="inline-block mb-6">
             <span className="text-2xl font-bold text-gray-900">MultiTask</span>
           </Link>
           <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
@@ -93,10 +111,14 @@ export default function Login() {
             </button>
           </form>
 
+          <div className="mt-5">
+            <GoogleLogin onSuccess={handleGoogleSuccess} onError={() => toast.error('Google login failed')} />
+          </div>
+
           <div className="mt-6 text-center text-sm text-gray-600">
-            Don't have a workspace?{' '}
+            Don't have an account?{' '}
             <Link to="/register" className="text-primary-600 font-medium hover:text-primary-700">
-              Create one
+              Sign up
             </Link>
           </div>
         </div>

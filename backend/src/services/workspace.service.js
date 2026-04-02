@@ -13,7 +13,7 @@ class WorkspaceService {
     return workspace;
   }
 
-  async updateWorkspace(workspaceId, data) {
+  async updateWorkspace(workspaceId, userId, data) {
     const updateData = {};
     if (data.name) updateData.name = data.name;
     if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl;
@@ -23,6 +23,18 @@ class WorkspaceService {
       where: { id: workspaceId },
       data: updateData,
     });
+
+    await prisma.activityLog.create({
+      data: {
+        action: 'WORKSPACE_UPDATED',
+        entityType: 'WORKSPACE',
+        entityId: workspaceId,
+        details: JSON.stringify(updateData),
+        workspaceId,
+        userId,
+      },
+    });
+
     return workspace;
   }
 }

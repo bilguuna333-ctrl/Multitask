@@ -6,6 +6,33 @@ const { sendInvitationEmail } = require('../utils/email');
 const { generateTokenPair } = require('../utils/jwt');
 
 class InvitationService {
+  async searchUsers(workspaceId, query, { limit = 8 } = {}) {
+    const q = (query || '').trim();
+    if (!q) return [];
+
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { email: { contains: q } },
+          { firstName: { contains: q } },
+          { lastName: { contains: q } },
+        ],
+        memberships: {
+          none: {
+            workspaceId,
+            isActive: true,
+          },
+        },
+      },
+      select: { id: true, email: true, firstName: true, lastName: true, avatarUrl: true },
+      take: limit,
+      orderBy: { email: 'asc' },
+    });
+
+    return users;
+  }
+
   async createInvitation(workspaceId, invitedBy, { email, role = 'MEMBER' }) {
     const existingMember = await prisma.membership.findFirst({
       where: { workspaceId, user: { email }, isActive: true },
@@ -27,6 +54,7 @@ class InvitationService {
     const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId } });
     await sendInvitationEmail(email, workspace.name, token);
 
+    // Notify the inviter
     await prisma.notification.create({
       data: {
         type: 'INVITE_SENT',
@@ -36,6 +64,21 @@ class InvitationService {
         userId: invitedBy,
       },
     });
+
+    // Notify the invited user if they already exist in the system
+    const invitedUser = await prisma.user.findUnique({ where: { email } });
+    if (invitedUser) {
+      await prisma.notification.create({
+        data: {
+          type: 'INVITATION_RECEIVED',
+          title: 'New Workspace Invitation',
+          message: `You have been invited to join ${workspace.name}`,
+          link: '/company-select',
+          workspaceId,
+          userId: invitedUser.id,
+        },
+      });
+    }
 
     return invitation;
   }
@@ -60,6 +103,42 @@ class InvitationService {
     };
   }
 
+  async getMyInvitations(email) {
+    return prisma.invitation.findMany({
+      where: { email, status: 'PENDING', expiresAt: { gt: new Date() } },
+      include: {
+        workspace: { select: { id: true, name: true, slug: true, logoUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async acceptInvitationById(invitationId, userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('User not found', 404);
+
+    const invitation = await prisma.invitation.findFirst({
+      where: { id: invitationId, email: user.email, status: 'PENDING' },
+    });
+    if (!invitation) throw new AppError('Invitation not found', 404);
+    if (invitation.expiresAt < new Date()) throw new AppError('Invitation has expired', 400);
+
+    return this._performAccept(invitation, user);
+  }
+
+  async rejectInvitationById(invitationId, userId) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const invitation = await prisma.invitation.findFirst({
+      where: { id: invitationId, email: user.email, status: 'PENDING' },
+    });
+    if (!invitation) throw new AppError('Invitation not found', 404);
+
+    return prisma.invitation.update({
+      where: { id: invitationId },
+      data: { status: 'REJECTED' },
+    });
+  }
+
   async acceptInvitation({ token, firstName, lastName, password }) {
     const invitation = await prisma.invitation.findUnique({ where: { token } });
     if (!invitation || invitation.status !== 'PENDING') {
@@ -71,17 +150,21 @@ class InvitationService {
 
     let user = await prisma.user.findUnique({ where: { email: invitation.email } });
 
-    const result = await prisma.$transaction(async (tx) => {
-      if (!user) {
-        if (!firstName || !lastName || !password) {
-          throw new AppError('First name, last name, and password are required for new users', 400);
-        }
-        const passwordHash = await bcrypt.hash(password, 12);
-        user = await tx.user.create({
-          data: { email: invitation.email, passwordHash, firstName, lastName },
-        });
+    if (!user) {
+      if (!firstName || !lastName || !password) {
+        throw new AppError('First name, last name, and password are required for new users', 400);
       }
+      const passwordHash = await bcrypt.hash(password, 12);
+      user = await prisma.user.create({
+        data: { email: invitation.email, passwordHash, firstName, lastName },
+      });
+    }
 
+    return this._performAccept(invitation, user);
+  }
+
+  async _performAccept(invitation, user) {
+    const result = await prisma.$transaction(async (tx) => {
       const existingMembership = await tx.membership.findFirst({
         where: { userId: user.id, workspaceId: invitation.workspaceId },
       });
@@ -108,6 +191,17 @@ class InvitationService {
       });
 
       return { user, membership };
+    });
+
+    // Notify the inviter
+    await prisma.notification.create({
+      data: {
+        type: 'INVITATION_ACCEPTED',
+        title: 'Invitation Accepted',
+        message: `${result.user.firstName} ${result.user.lastName} has joined the workspace.`,
+        workspaceId: invitation.workspaceId,
+        userId: invitation.invitedBy,
+      },
     });
 
     const tokens = generateTokenPair(result.user, result.membership);

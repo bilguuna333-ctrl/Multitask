@@ -6,7 +6,7 @@ class NotificationService {
     const skip = (page - 1) * limit;
     const where = {
       userId,
-      workspaceId,
+      ...(workspaceId ? { workspaceId } : {}),
       ...(unreadOnly && { isRead: false }),
     };
 
@@ -18,7 +18,7 @@ class NotificationService {
         take: limit,
       }),
       prisma.notification.count({ where }),
-      prisma.notification.count({ where: { userId, workspaceId, isRead: false } }),
+      prisma.notification.count({ where: { ...where, isRead: false } }),
     ]);
 
     return {
@@ -26,6 +26,16 @@ class NotificationService {
       unreadCount,
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
+  }
+
+  async getUnreadCount(userId, workspaceId) {
+    return prisma.notification.count({
+      where: {
+        userId,
+        ...(workspaceId ? { workspaceId } : {}),
+        isRead: false,
+      },
+    });
   }
 
   async markAsRead(notificationId, userId) {
@@ -42,7 +52,7 @@ class NotificationService {
 
   async markAllAsRead(userId, workspaceId) {
     await prisma.notification.updateMany({
-      where: { userId, workspaceId, isRead: false },
+      where: { userId, ...(workspaceId ? { workspaceId } : {}), isRead: false },
       data: { isRead: true },
     });
     return { message: 'All notifications marked as read' };

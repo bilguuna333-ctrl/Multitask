@@ -11,6 +11,7 @@ async function main() {
   await prisma.notification.deleteMany();
   await prisma.activityLog.deleteMany();
   await prisma.taskComment.deleteMany();
+  await prisma.taskSubmission.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.task.deleteMany();
   await prisma.projectMember.deleteMany();
@@ -63,7 +64,7 @@ async function main() {
   await prisma.membership.createMany({
     data: [
       { userId: user1.id, workspaceId: workspace1.id, role: 'OWNER' },
-      { userId: user2.id, workspaceId: workspace1.id, role: 'ADMIN' },
+      { userId: user2.id, workspaceId: workspace1.id, role: 'MANAGER' },
       { userId: user3.id, workspaceId: workspace1.id, role: 'MEMBER' },
     ],
   });
@@ -386,7 +387,7 @@ async function main() {
   console.log('=== Demo Accounts ===');
   console.log('Tenant 1 - Acme Corp:');
   console.log('  Owner: alice@acme.com / Password123!');
-  console.log('  Admin: bob@acme.com / Password123!');
+  console.log('  Manager: bob@acme.com / Password123!');
   console.log('  Member: carol@acme.com / Password123!');
   console.log('');
   console.log('Tenant 2 - Startup Inc:');

@@ -12,7 +12,7 @@ export default function Settings() {
   const [form, setForm] = useState({ name: '', logoUrl: '', themeColor: '' });
   const { membership, updateWorkspace: updateStoreWorkspace } = useAuthStore();
 
-  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'ADMIN';
+  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'MANAGER';
 
   useEffect(() => {
     const fetchWorkspace = async () => {

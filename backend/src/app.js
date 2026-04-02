@@ -18,6 +18,8 @@ const taskRoutes = require('./routes/task.routes');
 const commentRoutes = require('./routes/comment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const submissionRoutes = require('./routes/submission.routes');
+const applicationRoutes = require('./routes/application.routes');
 
 const app = express();
 
@@ -71,6 +73,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // 404
 app.use((req, res) => {

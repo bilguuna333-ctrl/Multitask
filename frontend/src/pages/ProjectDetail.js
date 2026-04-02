@@ -95,7 +95,7 @@ export default function ProjectDetail() {
   if (loading) return <PageLoader />;
   if (!project) return null;
 
-  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'ADMIN';
+  const isAdmin = ['OWNER', 'MANAGER'].includes(membership?.role);
 
   return (
     <div>
@@ -113,7 +113,7 @@ export default function ProjectDetail() {
             {project.description && <p className="text-gray-600 mt-2 max-w-2xl">{project.description}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowCreateTask(true)} className="btn-primary"><Plus className="w-4 h-4 mr-1" /> Add Task</button>
+            {isAdmin && <button onClick={() => setShowCreateTask(true)} className="btn-primary"><Plus className="w-4 h-4 mr-1" /> Add Task</button>}
             {isAdmin && (
               <>
                 <button onClick={() => setShowEdit(true)} className="btn-secondary"><Edit2 className="w-4 h-4" /></button>
@@ -195,8 +195,9 @@ export default function ProjectDetail() {
       </div>
 
       {/* Edit Project Modal */}
-      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit Project">
-        <form onSubmit={handleUpdate} className="space-y-4">
+      <Modal isOpen={showEdit && isAdmin} onClose={() => setShowEdit(false)} title="Edit Project">
+        {showEdit && isAdmin && (
+          <form onSubmit={handleUpdate} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
             <input className="input-field" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />

@@ -10,9 +10,13 @@ router.post('/accept', acceptInvitationValidator, validate, invitationController
 
 // Protected routes
 router.use(authenticate);
-router.post('/', requireMinRole('ADMIN'), createInvitationValidator, validate, invitationController.createInvitation);
+router.get('/my-invitations', invitationController.getMyInvitations);
+router.post('/my-invitations/:id/accept', invitationController.acceptInvitationById);
+router.post('/my-invitations/:id/reject', invitationController.rejectInvitationById);
+router.get('/search-users', requireMinRole('MANAGER'), invitationController.searchUsers);
+router.post('/', requireMinRole('MANAGER'), createInvitationValidator, validate, invitationController.createInvitation);
 router.get('/', invitationController.getInvitations);
-router.delete('/:id', requireMinRole('ADMIN'), invitationController.cancelInvitation);
-router.post('/:id/resend', requireMinRole('ADMIN'), invitationController.resendInvitation);
+router.delete('/:id', requireMinRole('MANAGER'), invitationController.cancelInvitation);
+router.post('/:id/resend', requireMinRole('MANAGER'), invitationController.resendInvitation);
 
 module.exports = router;

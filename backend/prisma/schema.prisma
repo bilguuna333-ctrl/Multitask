@@ -18,12 +18,13 @@ model Workspace {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  memberships  Membership[]
-  invitations  Invitation[]
-  projects     Project[]
-  tasks        Task[]
-  notifications Notification[]
-  activityLogs ActivityLog[]
+  memberships    Membership[]
+  invitations    Invitation[]
+  projects       Project[]
+  tasks          Task[]
+  notifications  Notification[]
+  activityLogs   ActivityLog[]
+  applications   CompanyApplication[]
 
   @@index([slug])
 }
@@ -31,7 +32,9 @@ model Workspace {
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
-  passwordHash  String
+  passwordHash  String?
+  googleId      String?  @unique
+  authProvider  String   @default("LOCAL")
   firstName     String
   lastName      String
   avatarUrl     String?  @db.Text
@@ -42,11 +45,14 @@ model User {
   memberships      Membership[]
   assignedTasks    Task[]          @relation("TaskAssignee")
   createdTasks     Task[]          @relation("TaskCreator")
+  reviewedTasks    Task[]          @relation("TaskReviewer")
+  submissions      TaskSubmission[]
   taskComments     TaskComment[]
   notifications    Notification[]
   activityLogs     ActivityLog[]
   passwordResets   PasswordResetToken[]
   projectMembers   ProjectMember[]
+  applications     CompanyApplication[]
 
   @@index([email])
 }
@@ -146,14 +152,23 @@ model Task {
   assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   creator     User      @relation("TaskCreator", fields: [creatorId], references: [id])
 
+  reviewStatus  String   @default("PENDING")
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNote    String?  @db.Text
+
+  reviewedBy    User?    @relation("TaskReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
   comments    TaskComment[]
   attachments Attachment[]
+  submissions TaskSubmission[]
 
   @@index([workspaceId])
   @@index([projectId])
   @@index([assigneeId])
   @@index([status])
   @@index([priority])
+  @@index([reviewStatus])
 }
 
 model TaskComment {
@@ -220,6 +235,49 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([workspaceId])
+}
+
+model TaskSubmission {
+  id          String   @id @default(uuid())
+  type        String
+  title       String
+  content     String?  @db.Text
+  fileUrl     String?  @db.Text
+  fileName    String?
+  fileSize    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  taskId      String
+  userId      String
+
+  task        Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+}
+
+model CompanyApplication {
+  id          String   @id @default(uuid())
+  status      String   @default("PENDING")
+  coverLetter String?  @db.Text
+  cvFileUrl   String?  @db.Text
+  cvFileName  String?
+  cvFileSize  Int?
+  note        String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId      String
+  workspaceId String
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId, status])
+  @@index([workspaceId, status])
+  @@index([userId])
 }
 
 model PasswordResetToken {

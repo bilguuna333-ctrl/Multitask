@@ -16,9 +16,11 @@ export default function Invitations() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ email: '', role: 'MEMBER' });
   const [sending, setSending] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [searching, setSearching] = useState(false);
   const { membership } = useAuthStore();
 
-  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'ADMIN';
+  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'MANAGER';
 
   const fetchInvitations = async () => {
     try {
@@ -32,6 +34,38 @@ export default function Invitations() {
   };
 
   useEffect(() => { fetchInvitations(); }, []);
+
+  useEffect(() => {
+    if (!showCreate) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+    const q = form.email.trim();
+    if (q.length < 2) {
+      setSuggestions([]);
+      setSearching(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await invitationService.searchUsers({ q, limit: 8 });
+        if (!cancelled) setSuggestions(res.data.data || []);
+      } catch (e) {
+        if (!cancelled) setSuggestions([]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [form.email, showCreate]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -66,7 +100,7 @@ export default function Invitations() {
       await invitationService.resendInvitation(id);
       toast.success('Invitation resent');
     } catch (err) {
-      toast.error('Failed to resend invitation');
+      toast.error(err.response?.data?.message || 'Failed to resend invitation');
     }
   };
 
@@ -136,13 +170,39 @@ export default function Invitations() {
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-            <input type="email" className="input-field" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="colleague@company.com" />
+            <div className="relative">
+              <input type="email" className="input-field" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="colleague@company.com" autoComplete="off" />
+              {(searching || suggestions.length > 0) && (
+                <div className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+                  {searching && (
+                    <div className="px-3 py-2 text-xs text-gray-500">Searching...</div>
+                  )}
+                  {!searching && suggestions.length === 0 && (
+                    <div className="px-3 py-2 text-xs text-gray-500">No matches</div>
+                  )}
+                  {!searching && suggestions.map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => {
+                        setForm({ ...form, email: u.email });
+                        setSuggestions([]);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50"
+                    >
+                      <div className="text-sm font-medium text-gray-900">{u.email}</div>
+                      <div className="text-xs text-gray-500">{u.firstName} {u.lastName}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
             <select className="input-field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="MEMBER">Member</option>
-              <option value="ADMIN">Admin</option>
+              <option value="MANAGER">Manager</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">

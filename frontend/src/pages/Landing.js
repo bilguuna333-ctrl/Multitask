@@ -17,10 +17,7 @@ export default function Landing() {
       {/* Header */}
       <header className="border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-              <CheckSquare className="w-5 h-5 text-white" />
-            </div>
+          <div className="flex items-center">
             <span className="text-xl font-bold text-gray-900">MultiTask</span>
           </div>
           <div className="flex items-center gap-3">

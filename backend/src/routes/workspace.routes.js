@@ -6,6 +6,6 @@ const { requireMinRole } = require('../middlewares/roles');
 router.use(authenticate);
 
 router.get('/', workspaceController.getWorkspace);
-router.put('/', requireMinRole('ADMIN'), workspaceController.updateWorkspace);
+router.put('/', requireMinRole('MANAGER'), workspaceController.updateWorkspace);
 
 module.exports = router;

@@ -2,7 +2,7 @@ const { body, param } = require('express-validator');
 
 const createInvitationValidator = [
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
-  body('role').optional().isIn(['ADMIN', 'MEMBER']).withMessage('Role must be ADMIN or MEMBER'),
+  body('role').optional().isIn(['MANAGER', 'MEMBER']).withMessage('Role must be MANAGER or MEMBER'),
 ];
 
 const acceptInvitationValidator = [

@@ -6,8 +6,8 @@ import EmptyState from '../components/shared/EmptyState';
 import { PageLoader } from '../components/shared/LoadingSpinner';
 import toast from 'react-hot-toast';
 
-const roleIcons = { OWNER: Crown, ADMIN: ShieldCheck, MEMBER: Shield };
-const roleBadge = { OWNER: 'bg-purple-100 text-purple-700', ADMIN: 'bg-blue-100 text-blue-700', MEMBER: 'bg-gray-100 text-gray-700' };
+const roleIcons = { OWNER: Crown, MANAGER: Shield, MEMBER: Shield };
+const roleBadge = { OWNER: 'bg-purple-100 text-purple-700', MANAGER: 'bg-indigo-100 text-indigo-700', MEMBER: 'bg-gray-100 text-gray-700' };
 
 export default function Members() {
   const [members, setMembers] = useState([]);
@@ -28,7 +28,7 @@ export default function Members() {
 
   useEffect(() => { fetchMembers(); }, [search]);
 
-  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'ADMIN';
+  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'MANAGER';
 
   const handleRoleChange = async (memberId, newRole) => {
     try {
@@ -115,7 +115,7 @@ export default function Members() {
                             value={m.role}
                             onChange={(e) => handleRoleChange(m.id, e.target.value)}
                           >
-                            <option value="ADMIN">Admin</option>
+                            <option value="MANAGER">Manager</option>
                             <option value="MEMBER">Member</option>
                           </select>
                           <button onClick={() => handleRemove(m.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Remove member">

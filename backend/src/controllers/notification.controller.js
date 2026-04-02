@@ -4,14 +4,29 @@ const ApiResponse = require('../utils/apiResponse');
 class NotificationController {
   async getNotifications(req, res, next) {
     try {
-      const result = await notificationService.getNotifications(req.user.id, req.user.workspaceId, {
+      const result = await notificationService.getNotifications(req.user.id, req.user.workspaceId || null, {
         page: parseInt(req.query.page) || 1,
         limit: parseInt(req.query.limit) || 20,
         unreadOnly: req.query.unreadOnly === 'true',
       });
-      return ApiResponse.paginated(res, result.notifications, result.pagination, 'Success');
-    } catch (error) {
-      next(error);
+      return res.status(200).json({
+        success: true,
+        message: 'Success',
+        data: result.notifications,
+        pagination: result.pagination,
+        unreadCount: result.unreadCount,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async getUnreadCount(req, res, next) {
+    try {
+      const count = await notificationService.getUnreadCount(req.user.id, req.user.workspaceId || null);
+      return ApiResponse.success(res, { count }, 'Success');
+    } catch (err) {
+      next(err);
     }
   }
 

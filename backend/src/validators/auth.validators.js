@@ -1,7 +1,6 @@
 const { body } = require('express-validator');
 
 const registerValidator = [
-  body('workspaceName').trim().notEmpty().withMessage('Workspace name is required').isLength({ min: 2, max: 100 }),
   body('firstName').trim().notEmpty().withMessage('First name is required').isLength({ min: 1, max: 50 }),
   body('lastName').trim().notEmpty().withMessage('Last name is required').isLength({ min: 1, max: 50 }),
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
@@ -11,6 +10,10 @@ const registerValidator = [
 const loginValidator = [
   body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
   body('password').notEmpty().withMessage('Password is required'),
+];
+
+const googleLoginValidator = [
+  body('credential').notEmpty().withMessage('Google credential is required'),
 ];
 
 const forgotPasswordValidator = [
@@ -29,6 +32,7 @@ const refreshTokenValidator = [
 module.exports = {
   registerValidator,
   loginValidator,
+  googleLoginValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
   refreshTokenValidator,

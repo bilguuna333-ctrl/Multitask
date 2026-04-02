@@ -18,7 +18,7 @@ class MemberController {
   async updateRole(req, res, next) {
     try {
       const result = await memberService.updateRole(
-        req.params.id, req.body.role, req.user.workspaceId, req.user.role
+        req.params.id, req.body.role, req.user.workspaceId, req.user.id, req.user.role
       );
       return ApiResponse.success(res, result, 'Role updated');
     } catch (error) {
@@ -39,7 +39,7 @@ class MemberController {
 
   async reactivateMember(req, res, next) {
     try {
-      const result = await memberService.reactivateMember(req.params.id, req.user.workspaceId);
+      const result = await memberService.reactivateMember(req.params.id, req.user.workspaceId, req.user.id);
       return ApiResponse.success(res, result, 'Member reactivated');
     } catch (error) {
       next(error);
