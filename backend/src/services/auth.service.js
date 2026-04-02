@@ -332,6 +332,68 @@ class AuthService {
       ...tokens,
     };
   }
+
+  async createWorkspace(userId, { name, slug }) {
+    // Check if user already has a workspace
+    const existingMembership = await prisma.membership.findFirst({
+      where: { userId, isActive: true },
+      include: { workspace: true },
+    });
+
+    if (existingMembership) {
+      throw new AppError('User already has a workspace', 400);
+    }
+
+    // Check if slug is available
+    const existingWorkspace = await prisma.workspace.findUnique({
+      where: { slug },
+    });
+
+    if (existingWorkspace) {
+      throw new AppError('Workspace slug already taken', 400);
+    }
+
+    // Create workspace and membership in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const workspace = await tx.workspace.create({
+        data: { name, slug },
+      });
+
+      const membership = await tx.membership.create({
+        data: {
+          userId,
+          workspaceId: workspace.id,
+          role: 'OWNER',
+        },
+      });
+
+      return { workspace, membership };
+    });
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const tokens = generateTokenPair(user, result.membership);
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatarUrl: user.avatarUrl,
+      },
+      workspace: {
+        id: result.workspace.id,
+        name: result.workspace.name,
+        slug: result.workspace.slug,
+      },
+      membership: {
+        id: result.membership.id,
+        role: result.membership.role,
+      },
+      needsWorkspace: false,
+      ...tokens,
+    };
+  }
 }
 
 module.exports = new AuthService();

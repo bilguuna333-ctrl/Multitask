@@ -6,6 +6,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "build": "npx prisma generate",
+    "deploy:render": "echo 'See DEPLOYMENT.md for Render deployment instructions'",
+    "deploy:railway": "echo 'See RAILWAY_DEPLOY.md for Railway deployment instructions'",
+    "deploy:check": "node -e 'console.log(\"Node.js:\", process.version); require(\"./src/app.js\")'",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:migrate:prod": "npx prisma migrate deploy",
@@ -33,5 +37,9 @@
   "devDependencies": {
     "nodemon": "^3.1.7",
     "prisma": "^5.22.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }

@@ -19,7 +19,7 @@ const navItems = [
 ];
 
 const bottomItems = [
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 
@@ -94,7 +94,7 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-gray-200 space-y-1">
-        {bottomItems.map((item) => (
+        {bottomItems.filter((item) => !item.adminOnly || isAdmin).map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

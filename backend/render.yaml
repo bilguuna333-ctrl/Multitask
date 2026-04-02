@@ -1,0 +1,21 @@
+{
+  "name": "multitask-backend",
+  "version": "1.0.0",
+  "description": "Multi-tenant task management SaaS - Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "build": "npx prisma generate",
+    "postbuild": "npm install",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:migrate:prod": "npx prisma migrate deploy",
+    "prisma:seed": "node prisma/seed.js",
+    "prisma:studio": "npx prisma studio",
+    "prisma:reset": "npx prisma migrate reset --force"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -91,6 +91,15 @@ class AuthController {
       next(error);
     }
   }
+
+  async createWorkspace(req, res, next) {
+    try {
+      const result = await authService.createWorkspace(req.user.id, req.body);
+      return ApiResponse.created(res, result, 'Workspace created successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthController();

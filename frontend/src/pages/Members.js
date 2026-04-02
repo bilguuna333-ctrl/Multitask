@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Search, Users, Shield, ShieldCheck, Crown, UserMinus, UserCheck } from 'lucide-react';
 import memberService from '../services/memberService';
 import useAuthStore from '../store/authStore';
+import { usePermissions } from '../hooks/usePermissions';
 import EmptyState from '../components/shared/EmptyState';
 import { PageLoader } from '../components/shared/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -14,6 +15,7 @@ export default function Members() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const { membership, user } = useAuthStore();
+  const { can } = usePermissions();
 
   const fetchMembers = async () => {
     try {
@@ -28,9 +30,12 @@ export default function Members() {
 
   useEffect(() => { fetchMembers(); }, [search]);
 
-  const isAdmin = membership?.role === 'OWNER' || membership?.role === 'MANAGER';
-
   const handleRoleChange = async (memberId, newRole) => {
+    if (!can('CHANGE_MEMBER_ROLES')) {
+      toast.error('You don\'t have permission to change member roles');
+      return;
+    }
+    
     try {
       await memberService.updateRole(memberId, newRole);
       toast.success('Role updated');
@@ -41,6 +46,11 @@ export default function Members() {
   };
 
   const handleRemove = async (memberId) => {
+    if (!can('REMOVE_MEMBERS')) {
+      toast.error('You don\'t have permission to remove members');
+      return;
+    }
+    
     if (!window.confirm('Remove this member from the workspace?')) return;
     try {
       await memberService.removeMember(memberId);
@@ -106,7 +116,7 @@ export default function Members() {
                   <span className={`badge ${roleBadge[m.role]} flex items-center gap-1`}>
                     <RoleIcon className="w-3.5 h-3.5" /> {m.role}
                   </span>
-                  {isAdmin && m.role !== 'OWNER' && m.user.id !== user?.id && (
+                  {can('CHANGE_MEMBER_ROLES') && m.role !== 'OWNER' && m.user.id !== user?.id && (
                     <div className="flex items-center gap-1">
                       {m.isActive ? (
                         <>

@@ -219,6 +219,7 @@ export default function ProjectDetail() {
             <button type="submit" disabled={saving} className="btn-primary">{saving ? 'Saving...' : 'Save Changes'}</button>
           </div>
         </form>
+        )}
       </Modal>
 
       {/* Create Task Modal */}

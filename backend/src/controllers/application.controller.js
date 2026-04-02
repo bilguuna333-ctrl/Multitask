@@ -13,11 +13,7 @@ class ApplicationController {
 
   async createCompany(req, res, next) {
     try {
-      const data = { ...req.body };
-      if (req.file) {
-        data.logoUrl = `/uploads/${req.file.filename}`;
-      }
-      const result = await applicationService.createCompany(req.user.id, data);
+      const result = await applicationService.createCompany(req.user.id, req.body);
       return ApiResponse.created(res, result, 'Company created');
     } catch (error) {
       next(error);

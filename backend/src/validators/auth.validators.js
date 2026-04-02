@@ -29,6 +29,11 @@ const refreshTokenValidator = [
   body('refreshToken').notEmpty().withMessage('Refresh token is required'),
 ];
 
+const createWorkspaceValidator = [
+  body('name').trim().notEmpty().withMessage('Workspace name is required').isLength({ min: 1, max: 100 }),
+  body('slug').trim().notEmpty().withMessage('Workspace slug is required').isLength({ min: 1, max: 100 }).matches(/^[a-z0-9-]+$/).withMessage('Slug can only contain lowercase letters, numbers, and hyphens'),
+];
+
 module.exports = {
   registerValidator,
   loginValidator,
@@ -36,4 +41,5 @@ module.exports = {
   forgotPasswordValidator,
   resetPasswordValidator,
   refreshTokenValidator,
+  createWorkspaceValidator,
 };

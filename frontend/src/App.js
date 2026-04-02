@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-
+import CustomToast from './components/shared/CustomToast';
 import DashboardLayout from './components/layout/DashboardLayout';
 import ProtectedRoute from './components/shared/ProtectedRoute';
 
@@ -37,7 +37,26 @@ function PublicRoute({ children }) {
 export default function App() {
   return (
     <Router>
-      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+      <Toaster 
+        position="top-right"
+        gutter={12}
+        containerStyle={{
+          top: 20,
+          right: 20,
+        }}
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'transparent',
+            border: 'none',
+            boxShadow: 'none',
+            padding: '0',
+            margin: '0 0 12px 0',
+          },
+        }}
+      >
+        {(t) => <CustomToast t={t} />}
+      </Toaster>
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
@@ -57,9 +76,9 @@ export default function App() {
           <Route path="/kanban" element={<KanbanBoard />} />
           <Route path="/members" element={<Members />} />
           <Route path="/invitations" element={<Invitations />} />
-          <Route path="/applications" element={<Applications />} />
+          <Route path="/applications" element={<ProtectedRoute requiredRoles={['OWNER', 'MANAGER']}><Applications /></ProtectedRoute>} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<ProtectedRoute requiredRoles={['OWNER', 'MANAGER']}><Settings /></ProtectedRoute>} />
           <Route path="/profile" element={<Profile />} />
         </Route>
 

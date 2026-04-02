@@ -1,7 +1,8 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { Toaster } from 'react-hot-toast';
+import ProtectedRoute from '../shared/ProtectedRoute';
 
 export default function DashboardLayout() {
   return (

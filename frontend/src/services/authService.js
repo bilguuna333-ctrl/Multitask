@@ -1,6 +1,10 @@
 import api from './api';
 
 const authService = {
+  register: (userData) => api.post('/auth/register', userData),
+  login: (credentials) => api.post('/auth/login', credentials),
+  googleLogin: (credential) => api.post('/auth/google', { credential }),
+  refreshToken: (refreshToken) => api.post('/auth/refresh-token', { refreshToken }),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   getProfile: () => api.get('/auth/profile'),

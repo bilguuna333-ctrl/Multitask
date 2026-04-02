@@ -4,11 +4,9 @@ const applicationService = {
   listWorkspaces: (params) => api.get('/applications/workspaces', { params }),
 
   createCompany: (data) => {
-    const formData = new FormData();
-    formData.append('name', data.name);
-    if (data.logo) formData.append('logo', data.logo);
-    return api.post('/applications/create-company', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    return api.post('/applications/create-company', {
+      name: data.name,
+      logoUrl: data.logoUrl || null
     });
   },
 

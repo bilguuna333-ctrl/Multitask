@@ -15,7 +15,7 @@ function maybeUploadCv(req, res, next) {
 router.get('/workspaces', authenticate, applicationController.listWorkspaces);
 
 // Create a new company
-router.post('/create-company', authenticate, upload.single('logo'), applicationController.createCompany);
+router.post('/create-company', authenticate, applicationController.createCompany);
 
 // Apply to a company (with optional CV upload)
 router.post(

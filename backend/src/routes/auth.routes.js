@@ -9,6 +9,7 @@ const {
   forgotPasswordValidator,
   resetPasswordValidator,
   refreshTokenValidator,
+  createWorkspaceValidator,
 } = require('../validators/auth.validators');
 
 router.post('/register', registerValidator, validate, authController.register);
@@ -22,5 +23,6 @@ router.get('/profile', authenticate, authController.getProfile);
 router.put('/profile', authenticate, authController.updateProfile);
 router.post('/change-password', authenticate, authController.changePassword);
 router.post('/switch-workspace', authenticate, authController.switchWorkspace);
+router.post('/create-workspace', authenticate, createWorkspaceValidator, validate, authController.createWorkspace);
 
 module.exports = router;

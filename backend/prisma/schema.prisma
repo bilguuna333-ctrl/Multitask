@@ -27,6 +27,7 @@ model Workspace {
   applications   CompanyApplication[]
 
   @@index([slug])
+  @@unique([name])
 }
 
 model User {

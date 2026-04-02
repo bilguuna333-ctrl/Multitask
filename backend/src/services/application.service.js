@@ -43,15 +43,30 @@ class ApplicationService {
     if (!name || !name.trim()) {
       throw new AppError('Company name is required', 400);
     }
-    if (!logoUrl) {
-      throw new AppError('Company logo is required', 400);
+
+    const trimmedName = name.trim();
+    
+    // Check if company name already exists
+    const existingCompany = await prisma.workspace.findFirst({
+      where: { 
+        name: trimmedName,
+        isActive: true 
+      }
+    });
+
+    if (existingCompany) {
+      throw new AppError('Company name already exists. Please choose a different name.', 409);
     }
 
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + uuidv4().slice(0, 6);
+    const slug = trimmedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + uuidv4().slice(0, 6);
 
     const result = await prisma.$transaction(async (tx) => {
       const workspace = await tx.workspace.create({
-        data: { name: name.trim(), slug, logoUrl },
+        data: { 
+          name: trimmedName, 
+          slug, 
+          logoUrl: logoUrl && logoUrl.trim() ? logoUrl.trim() : null 
+        },
       });
 
       const membership = await tx.membership.create({

@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Plus, Search, Send, Upload, FileText, CheckCircle, XCircle, Clock, Loader2, Users, Mail } from 'lucide-react';
+import { Building2, Plus, Search, Send, FileText, CheckCircle, XCircle, Clock, Loader2, Users, Mail } from 'lucide-react';
 import applicationService from '../services/applicationService';
 import invitationService from '../services/invitationService';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
+
+// For testing - you can remove this in production
+if (process.env.NODE_ENV === 'development') {
+  window.testToasts = {
+    success: () => toast.success('Test success message!'),
+    error: () => toast.error('Test error message!'),
+    loading: () => toast.loading('Test loading...'),
+  };
+}
 
 export default function CompanySelect() {
   const { user, setAuth, logout } = useAuthStore();
@@ -14,7 +23,8 @@ export default function CompanySelect() {
   const [loading, setLoading] = useState(false);
 
   const [companyName, setCompanyName] = useState('');
-  const [logoFile, setLogoFile] = useState(null);
+  const [logoUrl, setLogoUrl] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const [workspaces, setWorkspaces] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -93,18 +103,25 @@ export default function CompanySelect() {
 
   const handleCreateCompany = async (e) => {
     e.preventDefault();
-    if (!companyName.trim()) return toast.error('Company name is required');
-    if (!logoFile) return toast.error('Company logo is required');
+    if (!companyName.trim()) {
+      setNameError('Company name is required');
+      return toast.error('Company name is required');
+    }
+    setNameError('');
     setLoading(true);
     try {
-      const res = await applicationService.createCompany({ name: companyName, logo: logoFile });
+      const res = await applicationService.createCompany({ name: companyName, logoUrl: logoUrl.trim() || null });
       if (res.data.success) {
         setAuth(res.data.data);
         toast.success('Company created!');
         navigate('/dashboard');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create company');
+      const message = err.response?.data?.message || 'Failed to create company';
+      if (message.includes('already exists')) {
+        setNameError('Company name already exists');
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -195,29 +212,39 @@ export default function CompanySelect() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
                   <input
-                    className="input-field"
+                    className={`input-field ${nameError ? 'border-red-300 focus:border-red-500' : ''}`}
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    onChange={(e) => {
+                      setCompanyName(e.target.value);
+                      setNameError('');
+                    }}
                     placeholder="e.g. Acme Corp"
                     autoFocus
                   />
+                  {nameError && (
+                    <p className="text-xs text-red-600 mt-1">{nameError}</p>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo</label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setLogoFile(e.target.files[0] || null)}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer border border-gray-300 rounded-lg"
-                    />
-                    {logoFile && (
-                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <Upload className="w-3 h-3" /> {logoFile.name}
-                      </p>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Accepted: JPG, PNG, WEBP.</p>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company Logo URL (Optional)</label>
+                  <input
+                    type="url"
+                    className="input-field"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="https://example.com/logo.png"
+                  />
+                  {logoUrl && (
+                    <div className="mt-2">
+                      <img 
+                        src={logoUrl} 
+                        alt="Logo preview" 
+                        className="h-12 w-12 object-contain rounded border border-gray-200"
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">Enter a direct link to your logo (PNG, JPG, or WEBP). Logo is optional.</p>
                 </div>
                 <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
                   {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Creating...</span> : 'Create Company'}
